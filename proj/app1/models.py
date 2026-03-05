@@ -54,6 +54,12 @@ class Task(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['project', 'title'], 
+                name='uniq_task_title_in_project'
+            )
+        ]
 
     def __str__(self):
         return self.title

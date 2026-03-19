@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pl">
+    <head>
+        <meta charset="UTF-8">
+        <title>Szczegóły zadania</title>
+    </head>
+    <body>
+        <h1>{{ task.title }}</h1>
+        <p>Opis: {{ task.description }}</p>
+        <p>Status: {{ task.status }}</p>
+        <p>Projekt: {{ task.project }}</p>
+        <p>Termin: {{ task.due_date }}</p>
+        <p>Utworzono: {{ task.created_at }}</p>
+
+        {% if task.tags.all %}
+        <p><strong>Tagi:</strong></p>
+        <ul>
+            {% for tag in task.tags.all %}
+                <li>{{ tag.name }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        <p><a href="{% url 'task_list' %}">Powrót do listy</a></p>
+    </body>
+</html>

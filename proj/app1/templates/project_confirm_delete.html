@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1>Potwierdź usunięcie projektu</h1>
+<p>Usunąć projekt "{{ project.name }}"?</p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Usuń</button>
+</form>
+
+<a href="{% url 'project_detail' project.pk %}">Anuluj</a>
+
+{% endblock %}

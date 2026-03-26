@@ -1,19 +1,17 @@
-<!DOCTYPE html>
-<html lang="pl">
-    <head>
-        <meta charset="UTF-8">
-        <title>Lista zadań</title>
-    </head>
-    <body>
-        <h1>Lista zadań</h1>
-        {%if tasks %}
-        <ul>
-            {% for task in tasks %}
-                <li> <a href="{% url 'task_detail' task.pk %}">{{ task.title }}</a> | status: {{ task.status }} | projekt: {{ task.project }} | termin: {{ task.due_date }}</li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p>Brak zadań.</p>
-        {% endif %}
-    </body>
-</html>
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1>Lista zadań</h1>
+{%if tasks %}
+<ul>
+    {% for task in tasks %}
+        <li> <a href="{% url 'task_detail' task.pk %}">{{ task.title }}</a> | status: {{ task.status }} | projekt: {{ task.project }} | termin: {{ task.due_date }}</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>Brak zadań.</p>
+{% endif %}
+<p><a href="{% url 'task_add' %}">Dodaj nowe zadanie</a></p>
+
+{% endblock %}

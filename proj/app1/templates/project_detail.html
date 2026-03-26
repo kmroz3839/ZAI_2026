@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1>Szczegóły projektu</h1>
+<p>Nazwa: {{ project.name }}</p>
+<p>Opis: {{ project.description }}</p>
+<p>Utworzono: {{ project.created_at }}</p>
+
+<p><a href="{% url 'project_delete' project.pk %}">Usuń projekt</a></p>
+<p><a href="{% url 'project_edit' project.pk %}">Edytuj projekt</a></p>
+
+<p><a href="{% url 'project_list' %}">Powrót do listy</a></p>
+
+{% endblock %}

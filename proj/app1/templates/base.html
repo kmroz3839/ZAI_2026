@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="pl">
+    <head>
+        <meta charset="UTF-8">
+        <title>Task Manager</title>
+    </head>
+    <body>
+        <h1>Task Manager</h1>
+        <nav>
+            <a href="{% url 'task_list' %}">Zadania</a> |
+            <a href="{% url 'project_list' %}">Projekty</a>
+        </nav>
+        <hr>
+        {% block content %}
+        {% endblock %}
+    </body>
+</html>

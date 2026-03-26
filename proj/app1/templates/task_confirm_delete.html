@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1>Potwierdź usunięcie zadania</h1>
+<p>Usunąć zadanie "{{ task.title }}"?</p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Usuń</button>
+</form>
+
+<a href="{% url 'task_detail' task.pk %}">Anuluj</a>
+
+{% endblock %}

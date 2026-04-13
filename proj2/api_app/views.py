@@ -1,4 +1,6 @@
+import datetime, json
 from django.db import IntegrityError
+from django.http import FileResponse
 from django.shortcuts import render
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
@@ -7,13 +9,16 @@ from rest_framework.decorators import api_view, action
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-import datetime, json
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from import_export import resources
+from sendfile import sendfile
+from tablib import Dataset
 
 from .serializers import ConversionRateSerializer, CustomCurrencySerializer
 from .models import ConversionRate, CustomConversionRate, CustomCurrency
 from .nbp_api import get_exchange_rate_for_date
+from .admin import ConversionsResource
 from .custom_currency_api import get_nbp_or_custom_exchange_rate_for_date, fetch_user_custom_currencies, add_custom_currency, push_new_custom_exchange_rate, delete_custom_currency
 
 # Create your views here.
@@ -22,6 +27,13 @@ class ConversionRateViewSet(viewsets.ModelViewSet):
     queryset = ConversionRate.objects.all().order_by('-date_at')
     serializer_class = ConversionRateSerializer
 
+    @swagger_auto_schema(
+        operation_description="List conversion rates. Optional query parameters: code (filter by currency code), date_at (filter by date in format YYYY-MM-DD)",
+        manual_parameters=[
+            openapi.Parameter('code', openapi.IN_QUERY, description="currency code to filter by", type=openapi.TYPE_STRING),
+            openapi.Parameter('date_at', openapi.IN_QUERY, description="date to filter by in format YYYY-MM-DD", type=openapi.TYPE_STRING)
+        ]
+    )
     def list(self, request):
         #return super().list(self, request)
         qs = self.get_queryset()
@@ -38,6 +50,27 @@ class ConversionRateViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(qs, many=True)
             return Response(serializer.data, status=200)
 
+class AdminManageConversionRates(viewsets.ViewSet):
+    permission_classes = [permissions.IsAdminUser]
+
+    def bulk_export(self, request):
+        dataset = ConversionsResource().export()
+        data = dataset.export("csv")
+        return FileResponse(data, content_type='text/csv', filename='conversion_rates.csv')
+        #response = Response(data, content_type='text/csv')
+        #response['Content-Disposition'] = 'attachment; filename="conversion_rates.csv"'
+        #return response
+
+    def bulk_import(self, request):
+        if 'file' not in request.FILES:
+            return Response({"error": "file is required"}, status=400)
+        file = request.FILES['file']
+        dataset = Dataset().load(file.read().decode('utf-8'), format='csv')
+        result = ConversionsResource().import_data(dataset, format='csv')
+        if result.has_errors():
+            return Response({"error": "invalid CSV format"}, status=400)
+        else:
+            return Response({"message": "import successful"}, status=200)
 
 class ConversionRateForDate(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
@@ -85,6 +118,7 @@ class ConvertToPLNUnauth(ConvertToPLN):
                 'date_at': openapi.Schema(type=openapi.TYPE_STRING, description='date for conversion rate in format YYYY-MM-DD (optional, default: today)'),
             }
         ),
+        operation_description="Convert value to PLN",
         responses={
             200: openapi.Response('Success', openapi.Schema(
                 type=openapi.TYPE_OBJECT,
@@ -116,7 +150,7 @@ class ConvertToPLNAuth(ConvertToPLN):
                 'date_at': openapi.Schema(type=openapi.TYPE_STRING, description='date for conversion rate in format YYYY-MM-DD (optional, default: today)'),
             }
         ),
-        operation_description="Convert value to PLN using conversion rate for given code and date",
+        operation_description="Convert value to PLN",
         responses={
             200: openapi.Response('Success', openapi.Schema(
                 type=openapi.TYPE_OBJECT,
@@ -165,6 +199,7 @@ class ConvertFromPLNUnauth(ConvertFromPLN):
                 'date_at': openapi.Schema(type=openapi.TYPE_STRING, description='date for conversion rate in format YYYY-MM-DD (optional, default: today)'),
             }
         ),
+        operation_description="Convert value from PLN",
         responses={
             200: openapi.Response('Success', openapi.Schema(
                 type=openapi.TYPE_OBJECT,
@@ -197,6 +232,7 @@ class ConvertFromPLNAuth(ConvertFromPLN):
                 'date_at': openapi.Schema(type=openapi.TYPE_STRING, description='date for conversion rate in format YYYY-MM-DD (optional, default: today)'),
             }
         ),
+        operation_description="Convert value from PLN",
         responses={
             200: openapi.Response('Success', openapi.Schema(
                 type=openapi.TYPE_OBJECT,
@@ -279,6 +315,10 @@ class ListCustomCurrencies(viewsets.ModelViewSet):
     def get_queryset(self):
         uid = self.request.user.pk
         return fetch_user_custom_currencies(uid)
+    
+    @swagger_auto_schema(operation_description="List custom currencies added by the authenticated user")
+    def list(self, request):
+        return super().list(request)
 
 class ManageCustomCurrency(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -289,6 +329,7 @@ class ManageCustomCurrency(viewsets.ViewSet):
                 'code': openapi.Schema(type=openapi.TYPE_STRING, description='currency code'),
             }
         ),
+        operation_description="Define a new custom currency",
         responses={
             201: openapi.Response('Created', openapi.Schema(
                 type=openapi.TYPE_OBJECT,
@@ -347,13 +388,14 @@ class ManageCustomCurrency(viewsets.ViewSet):
             return Response({"error": "invalid JSON"}, status=400)
          
     @swagger_auto_schema(request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'code': openapi.Schema(type=openapi.TYPE_STRING, description='currency code'),
-            'rate': openapi.Schema(type=openapi.TYPE_NUMBER, description='exchange rate'),
-            'date_at': openapi.Schema(type=openapi.TYPE_STRING, description='date of the exchange rate'),
-        }
-    ),
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'code': openapi.Schema(type=openapi.TYPE_STRING, description='currency code'),
+                'rate': openapi.Schema(type=openapi.TYPE_NUMBER, description='exchange rate'),
+                'date_at': openapi.Schema(type=openapi.TYPE_STRING, description='date of the exchange rate'),
+            }
+        ),
+        operation_description="Push a new custom exchange rate for the authenticated user",
         responses={
             200: openapi.Response('Success', openapi.Schema(
                 type=openapi.TYPE_OBJECT,
@@ -381,3 +423,29 @@ class ManageCustomCurrency(viewsets.ViewSet):
                 return Response(ConversionRateSerializer(newObj).data, status=200)
         except json.JSONDecodeError:
             return Response({"error": "invalid JSON"}, status=400)
+        
+
+class ListCustomCurrencyExchangeRates(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ConversionRateSerializer
+
+    def get_queryset(self):
+        uid = self.request.user.pk
+        return CustomConversionRate.objects.filter(user_id=uid).order_by('-date_at')
+
+    @swagger_auto_schema(operation_description="List custom exchange rates for the authenticated user. Optional query parameters: code (filter by currency code), date_at (filter by date in format YYYY-MM-DD)")
+    def list(self, request):
+        #return super().list(self, request)
+        qs = self.get_queryset()
+        searchparams = self.request.query_params
+        if "code" in searchparams:
+            qs = qs.filter(from_currency=searchparams["code"])
+        if "date_at" in searchparams:
+            qs = qs.filter(date_at=searchparams["date_at"])
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        else:
+            serializer = self.get_serializer(qs, many=True)
+            return Response(serializer.data, status=200)

@@ -2,15 +2,19 @@ from django.db import models
 
 # Create your models here.
 
-class ConversionRate(models.Model):
+class ConvRateBase(models.Model):
     date_at = models.DateField()
     from_currency = models.CharField(max_length=3)
     to_currency = models.CharField(max_length=3)
     rate = models.FloatField()
 
+    class Meta:
+        abstract = True
+
     def __str__(self):
         return f"[{self.date_at}] {self.from_currency} -> {self.to_currency}: {self.rate}" 
-    
+
+class ConversionRate(ConvRateBase):
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -36,8 +40,16 @@ class CustomCurrency(models.Model):
         ]
 
 
-class CustomConversionRate(ConversionRate):
+class CustomConversionRate(ConvRateBase):
     user_id = models.IntegerField(null=False, blank=False)
 
     def __str__(self):
-        return f"(custom: user {self.user_id}) {ConversionRate.__str__(self)}" 
+        return f"(custom: user {self.user_id}) {super().__str__()}" 
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user_id', 'from_currency', 'to_currency', 'date_at'], 
+                name='uniq_custom_conv_rate_for_date'
+            )
+        ]

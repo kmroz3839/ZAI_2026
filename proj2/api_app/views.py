@@ -19,8 +19,24 @@ from .custom_currency_api import get_nbp_or_custom_exchange_rate_for_date, fetch
 # Create your views here.
 class ConversionRateViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny]
-    queryset = ConversionRate.objects.all().order_by('date_at')
+    queryset = ConversionRate.objects.all().order_by('-date_at')
     serializer_class = ConversionRateSerializer
+
+    def list(self, request):
+        #return super().list(self, request)
+        qs = self.get_queryset()
+        searchparams = self.request.query_params
+        if "code" in searchparams:
+            qs = qs.filter(from_currency=searchparams["code"])
+        if "date_at" in searchparams:
+            qs = qs.filter(date_at=searchparams["date_at"])
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        else:
+            serializer = self.get_serializer(qs, many=True)
+            return Response(serializer.data, status=200)
 
 
 class ConversionRateForDate(viewsets.ViewSet):
@@ -100,6 +116,7 @@ class ConvertToPLNAuth(ConvertToPLN):
                 'date_at': openapi.Schema(type=openapi.TYPE_STRING, description='date for conversion rate in format YYYY-MM-DD (optional, default: today)'),
             }
         ),
+        operation_description="Convert value to PLN using conversion rate for given code and date",
         responses={
             200: openapi.Response('Success', openapi.Schema(
                 type=openapi.TYPE_OBJECT,
@@ -358,6 +375,9 @@ class ManageCustomCurrency(viewsets.ViewSet):
             date_at = json_data["date_at"] if "date_at" in json_data else datetime.date.today()
             uid = request.user.pk
             newObj = push_new_custom_exchange_rate(uid, code, rate, date_at)
-            return Response(ConversionRateSerializer(newObj).data, status=200)
+            if newObj is None:
+                return Response({"error": "custom currency with given code does not exist"}, status=404)
+            else:
+                return Response(ConversionRateSerializer(newObj).data, status=200)
         except json.JSONDecodeError:
             return Response({"error": "invalid JSON"}, status=400)

@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views import ConversionRateForDate, ConversionRateViewSet, ConvertFromPLN, ConvertFromPLNAuth, ConvertFromPLNUnauth, ConvertToPLN, AuthGetToken, AuthRegisterUser, ConvertToPLNAuth, ConvertToPLNUnauth, ListCustomCurrencies
-from .views import ManageCustomCurrency, ListCustomCurrencyExchangeRates, AdminManageConversionRates
+from .views import ManageCustomCurrency, ListCustomCurrencyExchangeRates, AdminManageConversionRates, UserActions
 
 urlpatterns = [
     path("public/convrates/", ConversionRateViewSet.as_view({'get': 'list'}), name='all_conv_rates'),
@@ -9,6 +9,7 @@ urlpatterns = [
     path("public/topln", ConvertToPLNUnauth.as_view({'post': 'retrieve'}), name='currency_to_pln'),
     path("public/frompln", ConvertFromPLNUnauth.as_view({'post': 'retrieve'}), name='currency_from_pln'),
 
+    path("user/delete", UserActions.as_view({'delete': 'delete'}), name='user_delete'),
     path("user/topln", ConvertToPLNAuth.as_view({'post': 'retrieve'}), name='currency_to_pln'),
     path("user/frompln", ConvertFromPLNAuth.as_view({'post': 'retrieve'}), name='currency_from_pln'),
     path("user/customcurrency", ListCustomCurrencies.as_view({'get': 'list'}), name='custom_currency_list_for_id'),

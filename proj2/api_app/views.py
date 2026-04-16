@@ -6,6 +6,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework import permissions, viewsets, views
 from rest_framework.decorators import api_view, action
+from rest_framework.parsers import JSONParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
@@ -53,6 +54,7 @@ class ConversionRateViewSet(viewsets.ModelViewSet):
 class AdminManageConversionRates(viewsets.ViewSet):
     permission_classes = [permissions.IsAdminUser]
 
+    @swagger_auto_schema(operation_description="Bulk export all conversion rates in database to CSV")
     def bulk_export(self, request):
         dataset = ConversionsResource().export()
         data = dataset.export("csv")
@@ -61,6 +63,10 @@ class AdminManageConversionRates(viewsets.ViewSet):
         #response['Content-Disposition'] = 'attachment; filename="conversion_rates.csv"'
         #return response
 
+    @swagger_auto_schema(
+        operation_description="Bulk import conversion rates from a CSV file",
+        manual_parameters=[openapi.Parameter('file', openapi.IN_FORM, description="CSV file to import", type=openapi.TYPE_FILE)]
+    )
     def bulk_import(self, request):
         if 'file' not in request.FILES:
             return Response({"error": "file is required"}, status=400)
@@ -75,6 +81,7 @@ class AdminManageConversionRates(viewsets.ViewSet):
 class ConversionRateForDate(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
 
+    @swagger_auto_schema(operation_description="Retrieve conversion rate for a given currency code and date. Optional query parameter: date_at (date in format YYYY-MM-DD, default: today)")
     def retrieve(self, request: Request, code=None, date_at=None):
         #kwargs = self.request.parser_context.get('kwargs')
         #code = kwargs["code"]
@@ -88,6 +95,8 @@ class ConversionRateForDate(viewsets.ViewSet):
         return Response(serializer.data)
 
 class ConvertToPLN(viewsets.ViewSet):
+    parser_classes = [JSONParser]
+
     def do(self, request: Request):
         try:
             requestbody = json.loads(self.request.body)
@@ -168,6 +177,8 @@ class ConvertToPLNAuth(ConvertToPLN):
         return self.do(request)
 
 class ConvertFromPLN(viewsets.ViewSet):
+    parser_classes = [JSONParser]
+
     def do(self, request):
         try:
             requestbody = json.loads(self.request.body)
@@ -251,7 +262,34 @@ class ConvertFromPLNAuth(ConvertFromPLN):
 
 class AuthGetToken(views.APIView):
     permission_classes = [permissions.AllowAny]
+    parser_classes = [JSONParser]
 
+    @swagger_auto_schema(request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+            properties={
+                'username': openapi.Schema(type=openapi.TYPE_STRING, description='username'),
+                'password': openapi.Schema(type=openapi.TYPE_STRING, description='password'),
+            }
+        ),
+        operation_description="Obtain authentication token by providing username and password",
+        responses={
+            200: openapi.Response('Success', openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'token': openapi.Schema(type=openapi.TYPE_STRING, description='authentication token'),
+                })),
+            400: openapi.Response('Bad Request', openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='error message'),
+                })),
+            401: openapi.Response('Unauthorized', openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='error message'),
+                }))
+        }
+    )
     def post(self, request):
         try:
             json_data = json.loads(request.body)
@@ -270,8 +308,10 @@ class AuthGetToken(views.APIView):
         
 class AuthRegisterUser(views.APIView):
     permission_classes = [permissions.AllowAny]
+    parser_classes = [JSONParser]
 
     @swagger_auto_schema(request_body=openapi.Schema(
+        operation_description="Create a new user account and obtain auth token",
         type=openapi.TYPE_OBJECT,
             properties={
                 'username': openapi.Schema(type=openapi.TYPE_STRING, description='desired username'),
@@ -322,6 +362,7 @@ class ListCustomCurrencies(viewsets.ModelViewSet):
 
 class ManageCustomCurrency(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [JSONParser]
     
     @swagger_auto_schema(request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -449,3 +490,14 @@ class ListCustomCurrencyExchangeRates(viewsets.ModelViewSet):
         else:
             serializer = self.get_serializer(qs, many=True)
             return Response(serializer.data, status=200)
+        
+class UserActions(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(operation_description="Delete the current user account and all their data")
+    def delete(self, request):
+        uid = request.user.pk
+        CustomCurrency.objects.filter(user_id=uid).delete()
+        CustomConversionRate.objects.filter(user_id=uid).delete()
+        request.user.delete()
+        return Response({"message": "user deleted"}, status=200)

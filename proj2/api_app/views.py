@@ -393,7 +393,7 @@ class ManageCustomCurrency(viewsets.ViewSet):
                 newObj = add_custom_currency(uid, code)
                 return Response(CustomCurrencySerializer(newObj).data, status=201)
             except IntegrityError:
-                return Response({"error": "already exists"}, status=400)
+                return Response({"error": "validation failed or already exists"}, status=400)
         except json.JSONDecodeError:
             return Response({"error": "invalid JSON"}, status=400)   
     

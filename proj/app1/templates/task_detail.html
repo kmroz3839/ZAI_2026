@@ -18,9 +18,9 @@
     {% endfor %}
 </ul>
 {% endif %}
-<p><a href="{% url 'task_delete' task.pk %}">Usuń zadanie</a></p>
-<p><a href="{% url 'task_edit' task.pk %}">Edytuj zadanie</a></p>
 
-<p><a href="{% url 'task_list' %}">Powrót do listy</a></p>
+    <a class="btn btn-danger" href="{% url 'task_delete' task.pk %}">Usuń zadanie</a>
+    <a class="btn btn-primary" href="{% url 'task_edit' task.pk %}">Edytuj zadanie</a>
+    <a class="btn btn-secondary" href="{% url 'task_list' %}">Powrót do listy</a>
 
 {% endblock %}

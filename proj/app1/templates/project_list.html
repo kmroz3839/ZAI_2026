@@ -4,15 +4,20 @@
 
 <h1>Lista projektów</h1>
 {% if projects %}
-<ul>
+<div class="list-group">
     {% for project in projects %}
-        <li><a href="{% url 'project_detail' project.pk %}">{{ project.name }}</a> | {{ project.description }}</li>
+        <a href="{% url 'project_detail' project.pk %}" class="list-group-item list-group-item-action">
+            {{ project.name }}
+            <br>
+            <p class="mb-1"><small>{{ project.description }}</small></p>
+        </a>
     {% endfor %}
-</ul>
+</div>
 {% else %}
 <p>Brak projektów.</p>
 {% endif %}
 
-<p><a href="{% url 'project_add' %}">Dodaj nowy projekt</a></p>
+<br>
+<a class="btn btn-primary" href="{% url 'project_add' %}">Dodaj nowy projekt</a>
 
 {% endblock %}

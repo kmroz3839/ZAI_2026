@@ -4,14 +4,20 @@
 
 <h1>Lista zadań</h1>
 {%if tasks %}
-<ul>
+<div class="list-group">
     {% for task in tasks %}
-        <li> <a href="{% url 'task_detail' task.pk %}">{{ task.title }}</a> | status: {{ task.status }} | projekt: {{ task.project }} | termin: {{ task.due_date }}</li>
+        <a href="{% url 'task_detail' task.pk %}" class="list-group-item list-group-item-action">
+            {{ task.title }} <br>
+            {{ task.project }}<br>
+            <small>status: {{ task.status }}</small><br>
+            <small>termin: {{ task.due_date }}</small>
+        </a>
     {% endfor %}
-</ul>
+</div>
 {% else %}
 <p>Brak zadań.</p>
 {% endif %}
-<p><a href="{% url 'task_add' %}">Dodaj nowe zadanie</a></p>
+<br>
+<p><a class="btn btn-primary" href="{% url 'task_add' %}">Dodaj nowe zadanie</a></p>
 
 {% endblock %}

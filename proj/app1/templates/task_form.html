@@ -6,8 +6,9 @@
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Zapisz</button>
+    <button class="btn btn-primary" type="submit">Zapisz</button>
 </form>
-<p><a href="{% url 'task_list' %}">Powrót do listy</a></p>
+<br>
+<a class="btn btn-secondary" href="{% url 'task_list' %}">Powrót do listy</a>
 
 {% endblock %}

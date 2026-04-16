@@ -7,9 +7,8 @@
 <p>Opis: {{ project.description }}</p>
 <p>Utworzono: {{ project.created_at }}</p>
 
-<p><a href="{% url 'project_delete' project.pk %}">Usuń projekt</a></p>
-<p><a href="{% url 'project_edit' project.pk %}">Edytuj projekt</a></p>
-
-<p><a href="{% url 'project_list' %}">Powrót do listy</a></p>
+<a class="btn btn-danger" href="{% url 'project_delete' project.pk %}">Usuń projekt</a>
+<a class="btn btn-primary" href="{% url 'project_edit' project.pk %}">Edytuj projekt</a>
+<a class="btn btn-secondary" href="{% url 'project_list' %}">Powrót do listy</a>
 
 {% endblock %}

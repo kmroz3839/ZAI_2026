@@ -81,7 +81,7 @@ class AdminManageConversionRates(viewsets.ViewSet):
 class ConversionRateForDate(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
 
-    @swagger_auto_schema(operation_description="Retrieve conversion rate for a given currency code and date. Optional query parameter: date_at (date in format YYYY-MM-DD, default: today)")
+    @swagger_auto_schema(operation_description="Get conversion rate for a given currency code and date. Optional query parameter: date_at (date in format YYYY-MM-DD, default: today)")
     def retrieve(self, request: Request, code=None, date_at=None):
         #kwargs = self.request.parser_context.get('kwargs')
         #code = kwargs["code"]
@@ -474,7 +474,7 @@ class ListCustomCurrencyExchangeRates(viewsets.ModelViewSet):
         uid = self.request.user.pk
         return CustomConversionRate.objects.filter(user_id=uid).order_by('-date_at')
 
-    @swagger_auto_schema(operation_description="List custom exchange rates for the authenticated user. Optional query parameters: code (filter by currency code), date_at (filter by date in format YYYY-MM-DD)")
+    @swagger_auto_schema(operation_description="List custom exchange rates for the authenticated user. Optional query parameters: code, date_at")
     def list(self, request):
         #return super().list(self, request)
         qs = self.get_queryset()
